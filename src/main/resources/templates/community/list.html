@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/layout}">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<th:block layout:fragment="script">
+    <script th:inline="javascript">
+        const modalElement = document.getElementById('boardModal');
+        // 모달 주입
+        let boardModal = bootstrap.Modal.getInstance(modalElement);
+
+        if (!boardModal) {
+            boardModal = new bootstrap.Modal(modalElement, {
+                backdrop: true, // static (바깥 눌러도 안 닫히게 하려면)
+                keyboard: true
+            });
+        }
+
+        const searchParams = {
+            page: 1,
+            size: 10,
+            title: '',
+            name: ''
+        }
+
+        $(function() {
+            // 페이징 버튼
+            $(document).on('click', '.page-link-ajax', function(e) {
+                e.preventDefault(); // a 태그 기본 동작 방지
+
+                const $parentLi = $(this).parent('.page-item');
+
+                // 활성화(active) 되었거나 비활성화(disabled)된 버튼은 클릭 무시
+                if ($parentLi.hasClass('active') || $parentLi.hasClass('disabled')) {
+                    return;
+                }
+
+                // 클릭한 a 태그의 data-page 속성값 추출 (ES6 const 사용)
+                const targetPage = $(this).data('page');
+
+                if (targetPage) {
+                    searchParams.page = targetPage;
+                    getBoardList();
+                }
+            });
+            // 검색 버튼
+            $('#searchBtn').on('click', function() {
+                const searchType = $('#searchType').val();
+                const keyword = $('#searchKeyword').val().trim();
+
+                searchParams.page = 1; // 검색 조건 변경 시 1페이지로 리셋
+                searchParams.title = (searchType == 'all' || searchType == 'title') ? keyword : '';
+                searchParams.name = (searchType == 'name') ? keyword : '';
+
+                getBoardList();
+            });
+
+            $('#searchKeyword').on('keydown', function(e) {
+                if (e.key == 'Enter' || e.keyCode == 13) {
+                    $('#searchBtn').trigger('click');
+                }
+            });
+
+            // 글쓰기 버튼 클릭
+            $('#writeModal').on('click', function() {
+                const isLogin = $(this).data('login');
+
+                if (isLogin) {
+                    if (confirm('로그인이 필요합니다. 로그인 페이지로 이동하시겠습니까?')) {
+                        location.href = '/login';
+                    }
+                } else {
+                    openBoardModal(null, 'create');
+                }
+            });
+
+            // 게시글 클릭
+            $(document).on('click', '.board-row', function() {
+                const boardId = $(this).data('id');
+                openBoardModal(boardId, 'view');
+            });
+
+            // 모달 등록 버튼 클릭
+            $(document).on('click', '#submitBoardBtn', function() {
+                submitBoard();
+            });
+
+            // 모달 삭제 버튼 클릭
+            $(document).on('click', '#deleteBoardBtn', function() {
+                const boardId = $(this).data('id');
+                deleteBoard(boardId);
+            });
+        });
+
+        // 게시물 리스트 조회
+        function getBoardList() {
+            $.ajax({
+                url :  '/community/api/board',
+                type : 'get',
+                dataType : 'html',
+                data : {page: searchParams.page, size: searchParams.size, title: searchParams.title, name: searchParams.name},
+                success : function(data) {
+                    console.log(data);
+                    $('#boardTableArea').html(data);
+
+                },
+                error : function(e) {
+                    console.log(e);
+                }
+            });
+        }
+
+        // 오픈 모달
+        // parameter : 아이디-id, 타입(쓰기, 읽기)-type
+        function openBoardModal(id, type) {
+            // 초기화
+            resetModalForm();
+
+            if (type == 'create') {
+                $('#modalTitle').text('게시글 작성');
+
+                $('#modalMetaInfo').addClass('d-none');
+                $('#writeTitleArea').removeClass('d-none');
+                $('#editorContainerWrapper').removeClass('d-none');
+                $('#detailViewContainer').addClass('d-none');
+                $('#modalCommentSection').addClass('d-none');
+
+                const footerHtml =
+                    '<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>' +
+                    '<button type="button" class="btn btn-primary" id="submitBoardBtn">등록</button>';
+                $('#modalFooter').html(footerHtml);
+
+                boardModal.show();
+            } else if (type == 'view') {
+                if (!id) return;
+
+                $.ajax({
+                    url :  '/community/api/board/' + id,
+                    type : 'get',
+                    dataType : 'json',
+                    success : function(data) {
+                        console.log(data);
+
+                        const board = data.board || data;
+                        const isOwner = data.isOwner || false;
+
+                        $('#modalTitle').text(board.title || '게시글 상세');
+                        $('#modalName').text('작성자: ' + (board.name || '익명'));
+                        $('#modalDate').text('작성일: ' + (board.createDt || ''));
+                        $('#modalMetaInfo').removeClass('d-none');
+
+                        $('#writeTitleArea').addClass('d-none');
+                        $('#editorContainerWrapper').addClass('d-none');
+
+                        $('#detailViewContainer').html(board.content || '').removeClass('d-none');
+                        $('#modalCommentSection').removeClass('d-none');
+
+                        // 동적 푸터 생성 (닫기 버튼만 제공)
+                        let footerHtml = '';
+                        if (isOwner) {
+                            footerHtml += '<button type="button" class="btn btn-danger me-auto" id="deleteBoardBtn" data-id="' + id + '">삭제</button>';
+                        }
+                        footerHtml += '<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>';
+                        $('#modalFooter').html(footerHtml);
+
+                        boardModal.show();
+                    },
+                    error : function(e) {
+                        console.log('조회 실패', e);
+                    }
+                });
+            }
+        }
+        // 모달 초기화
+        function resetModalForm() {
+            $('#regTitle').val('');
+            $('#regContent').val('');
+            $('#detailViewContainer').empty();
+            $('#modalCommentSection').empty();
+
+            if (typeof quill !== 'undefined') {
+                quill.setText('');
+            }
+        }
+
+        // 커뮤니티 게시판 등록
+        function submitBoard() {
+            const title = $('#regTitle').val().trim();
+            const content = $('#regContent').val().trim();
+
+            if (!title) {
+                alert('제목을 입력해주세요.');
+                $('#regTitle').focus();
+                return;
+            }
+
+            if (!content) {
+                alert('내용을 입력해주세요.');
+                $('#regContent').focus();
+                return;
+            }
+
+            $.ajax({
+                url :  '/community/api/board',
+                type : 'POST',
+                contentType:'application/json;',
+                data : JSON.stringify({title: title, content: content}),
+                success : function(data) {
+                    console.log(data);
+                    alert('등록 완료');
+                    boardModal.hide();
+                    if (typeof getBoardList == 'function') {
+                        getBoardList();
+                    }
+                },
+                error : function(e) {
+                    console.log(' error');
+                }
+            });
+        }
+
+        // 게시물 삭제
+        function deleteBoard(id) {
+            if (!id) {
+                return;
+            }
+            if (!confirm('삭제하시겠습니까?')) {
+                return;
+            }
+
+            $.ajax({
+                url : '/community/api/board/' + id,
+                type: 'delete',
+                success: function(data) {
+                    alert('삭제 되었습니다.');
+                    boardModal.hide();
+
+                    if (typeof getBoardList == 'function') {
+                        getBoardList();
+                    }
+                },
+                error: function(e) {
+                    console.log('삭제 실패' + e);
+                }
+            });
+        }
+    </script>
+</th:block>
+<div layout:fragment="content" class="container">
+    <div class="board-container">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="fw-bold text-dark">토론 & 자유 게시판</h2>
+            <button type="button" class="btn btn-primary fw-semibold" id="writeModal" th:data-login="${!isLogin}">
+                글쓰기
+            </button>
+        </div>
+
+        <div class="row mb-3 justify-content-end search-box">
+            <div class="col-md-8 col-lg-6">
+                <form id="searchForm" class="d-flex gap-2" onsubmit="return false;">
+                    <select class="form-select w-auto" id="searchType" name="searchType">
+                        <option value="all">전체</option>
+                        <option value="title">제목</option>
+                        <option value="name">작성자</option>
+                    </select>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="searchKeyword" placeholder="검색어를 입력하세요" autocomplete="off">
+                        <button class="btn btn-outline-secondary" type="button" id="searchBtn">
+                            검색
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <div id="boardTableArea" th:fragment="boardTableArea">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                    <tr>
+                        <th style="width: 8%">번호</th>
+                        <th>제목</th>
+                        <th style="width: 15%">작성자</th>
+                        <th style="width: 15%">작성일</th>
+                    </tr>
+                    </thead>
+                    <tbody id="boardList">
+                    <tr th:each="board : ${pageInfo.list}" class="tr-pointer board-row" th:data-id="${board.id}">
+                        <td th:text="${board.id}">1</td>
+                        <td class="fw-semibold" th:text="${board.title}">불편한 편의점 읽고 나눔합니다.</td>
+                        <td th:text="${board.name}">독서왕</td>
+                        <td th:text="${board.createDt}">2026-06-17</td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(pageInfo.list)}">
+                        <td colspan="4" class="text-center py-4 text-muted">등록된 게시글이 없습니다.</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="d-flex justify-content-center mt-4" th:if="${pageInfo.totalCount > 0}">
+                <nav aria-label="게시판 페이지 네비게이션">
+                    <ul class="pagination mb-0">
+                        <!-- 이전 페이지 버튼 -->
+                        <li class="page-item" th:classappend="${!pageInfo.prev} ? 'disabled'">
+                            <a class="page-link page-link-ajax" href="javascript:void(0);" th:data-page="${pageInfo.startPage - 1}" aria-label="Previous">
+                                <span aria-hidden="true">&laquo;</span>
+                            </a>
+                        </li>
+
+                        <li class="page-item"
+                            th:each="num : ${#numbers.sequence(pageInfo.startPage, pageInfo.endPage)}"
+                            th:classappend="${num == pageInfo.page} ? 'active'">
+                            <a class="page-link page-link-ajax" href="javascript:void(0);"
+                               th:data-page="${num}" th:text="${num}">1</a>
+                        </li>
+
+                        <!-- 다음 페이지 버튼 -->
+                        <li class="page-item" th:classappend="${!pageInfo.next} ? 'disabled'">
+                            <a class="page-link page-link-ajax" href="javascript:void(0);"
+                               th:data-page="${pageInfo.endPage + 1}" aria-label="Next">
+                                <span aria-hidden="true">&raquo;</span>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="modal fade" id="boardModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold" id="modalTitle">게시글 제목</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body p-4">
+                    <div id="modalMetaInfo" class="d-flex text-muted small mb-3 border-bottom pb-2 d-none">
+                        <span class="me-3" id="modalName">작성자: </span>
+                        <span id="modalDate">작성일: </span>
+                    </div>
+
+                    <div id="writeTitleArea" class="mb-3 d-none">
+                        <label for="regTitle" class="form-label fw-semibold">제목</label>
+                        <input type="text" class="form-control" id="regTitle" placeholder="제목을 입력하세요">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold" id="modalContentLabel">내용</label>
+
+                        <div id="editorContainerWrapper">
+                            <textarea class="form-control" id="regContent" rows="8" placeholder="내용을 입력하세요"></textarea>
+                        </div>
+
+                        <div id="detailViewContainer" class="p-3 bg-light rounded d-none" style="min-height: 200px;"></div>
+                    </div>
+
+                    <div id="modalCommentSection" class="comment-section d-none">
+                    </div>
+                </div>
+
+                <div class="modal-footer" id="modalFooter">
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/layout}"> <head>
+    <title>메인 페이지</title>
+</head>
+<body>
+
+<div layout:fragment="content" class="container py-4">
+    <!-- 메인 배너 -->
+    <div class="p-4 p-md-5 mb-4 text-white rounded bg-dark">
+        <div class="col-md-8 px-0">
+            <h1 class="display-4 fw-bold">전국 도서관과 도서를 한눈에, BookMarker</h1>
+            <p class="lead my-3 lh-lg">
+                도서 검색부터 네이버 지도 기반의 위치 확인까지 한눈에 조회할 수 있습니다.<br>
+                <span class="d-inline-block ms-3">▪ 구글, 카카오, 네이버 소셜 로그인으로 안전하게 게시판을 이용하세요.</span><br>
+                <span class="d-inline-block ms-3 text-white-50 small">▪ 회원 탈퇴 및 계정 관리 관련 사항은 로그인 후 [내 정보]에서 확인하실 수 있습니다.</span>
+            </p>
+        </div>
+    </div>
+
+    <!-- 미들 -->
+    <div class="row g-4 py-2 row-cols-1 row-cols-md-2 row-cols-lg-4">
+        <div class="col">
+            <div class="card h-100 shadow-sm border-0 bg-light">
+                <div class="card-body">
+                    <h5 class="card-title fw-bold">전국 도서관 지도 조회</h5>
+                    <p class="card-text text-muted small">정보공개 도서관 검색 시, 네이버 지도를 연동하여 위치를 화면에 바로 표시합니다.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card h-100 shadow-sm border-0 bg-light">
+                <div class="card-body">
+                    <h5 class="card-title fw-bold">통합 도서 검색</h5>
+                    <p class="card-text text-muted small">찾고 싶은 도서의 상세 정보와 저자, 출판사 정보를 통합 조회합니다.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card h-100 shadow-sm border-0 bg-light">
+                <div class="card-body">
+                    <h5 class="card-title fw-bold">실시간 소장 여부</h5>
+                    <p class="card-text text-muted small">원하는 도서가 특정 도서관에 소장되어 있는지 빠르게 확인합니다.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card h-100 shadow-sm border-0 bg-light">
+                <div class="card-body">
+                    <h5 class="card-title fw-bold">도서 이용 분석</h5>
+                    <p class="card-text text-muted small">도서별 대출 트렌드 및 연령/성별 이용 데이터를 제공합니다.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 하단 -->
+    <div class="mt-5 p-3 text-center border-top text-muted small">
+        본 서비스의 도서 및 도서관 정보는
+        <a href="https://data4library.kr/apiUtilization" target="_blank" class="text-decoration-underline text-secondary fw-semibold">
+            도서관 정보나루 Open API
+        </a>를 활용하여 구축되었습니다.
+    </div>
+</div>
+
+</body>
+</html>

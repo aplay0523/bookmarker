@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+  <title>BookMarker 서비스</title>
+  <th:block th:replace="~{layout/config :: config}"></th:block>
+</head>
+<body>
+
+<div class="container">
+  <th:block th:replace="~{layout/header :: header}"></th:block>
+  <div class="nav-scroller py-1 mb-2">
+    <nav class="nav d-flex justify-content-between">
+      <a class="p-2 text-muted fw-bold" href="/library">도서관</a>
+      <a class="p-2 text-muted fw-bold" href="/books">도서</a>
+      <a class="p-2 text-muted fw-bold" href="/community">게시판</a>
+      <a sec:authorize="isAuthenticated()" class="p-2 text-muted fw-bold" href="/myPage">내 정보</a>
+    </nav>
+  </div>
+  <main class="py-4">
+    <div layout:fragment="content"></div>
+  </main>
+</div>
+
+<th:block layout:fragment="script"></th:block>
+
+</body>
+</html>

@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.library.bookmarker.mapper.LibraryMapper">
+
+    <insert id="insertLibraryList">
+        -- LibraryMapper.insertLibraryList
+        INSERT INTO library (
+            lib_code
+            ,lib_name
+            ,latitude
+            ,longitude
+            ,lib_data
+            ,lib_sido
+            ,lib_sigungu
+            ,update_dt
+        ) VALUES
+            <foreach collection="list" item="item" separator=",">
+                (
+                    #{item.libCode}
+                    ,#{item.libName}
+                    ,#{item.latitude}::numeric
+                    ,#{item.longitude}::numeric
+                    ,#{item.libData}::jsonb
+                    ,#{item.libSido}
+                    ,#{item.libSigungu}
+                    ,NOW()
+                )
+            </foreach>
+
+    </insert>
+
+    <select id="selectLibrarySidoList" resultType="LibraryVo">
+        -- LibraryMapper.selectLibrarySidoList
+        SELECT
+            lib_sido
+        FROM library
+        WHERE lib_sido like '%도' or lib_sido like '%시'
+        GROUP BY lib_sido
+        ORDER BY lib_sido asc
+    </select>
+
+    <select id="selectLibrarySigunguList">
+        -- LibraryMapper.selectLibrarySigunguList
+        SELECT
+            lib_sigungu
+        FROM library
+        WHERE lib_sido = #{libSido}
+        GROUP BY lib_sigungu
+        ORDER BY lib_sigungu asc;
+    </select>
+
+    <select id="selectLibraryList">
+        -- LibraryMapper.selectLibraryList
+        SELECT
+            lib_code
+            ,lib_name
+            ,latitude
+            ,longitude
+            ,lib_data
+            ,lib_data ->> 'address' as libAddress
+            ,lib_data ->> 'tel' as libTel
+            ,lib_sido
+            ,lib_sigungu
+            ,update_dt
+        FROM library
+        <where>
+            <if test="address != null and address != ''">
+                AND lib_data ->> 'address' LIKE CONCAT(#{address}, '%')
+            </if>
+            <if test="libName != null and libName != ''">
+                AND lib_name LIKE CONCAT('%', #{libName}, '%')
+            </if>
+        </where>
+    </select>
+</mapper>

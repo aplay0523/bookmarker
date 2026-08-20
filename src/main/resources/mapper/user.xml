@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.library.bookmarker.mapper.UserMapper">
+
+    <select id="selectUser" resultType="UserVo">
+        -- UserMapper.selectUser
+        SELECT
+            id
+            ,email
+            ,name
+            ,age
+            ,provider
+            ,provider_id
+            ,create_dt
+        FROM public.user
+        WHERE provider = #{provider}
+        AND provider_id = #{providerId}
+    </select>
+
+    <insert id="insertUser" useGeneratedKeys="true" keyProperty="id">
+        -- UserMapper.insertUser
+        INSERT INTO public.user (
+            email
+            ,name
+            ,age
+            ,provider
+            ,provider_id
+            ,create_dt
+        ) VALUES (
+            #{email}
+            ,#{name}
+            ,#{age}
+            ,#{provider}
+            ,#{providerId}
+            ,NOW()
+        )
+    </insert>
+
+    <update id="updateUser">
+        -- UserMapper.updateUser
+        UPDATE public.user
+        SET name = #{name}, email = #{email}
+        WHERE provider = #{provider} AND providerId = #{providerId}
+    </update>
+
+    <delete id="deleteUser">
+        -- UserMapper.deleteUser
+        DELETE FROM public.user
+        WHERE id = #{id}
+    </delete>
+</mapper>

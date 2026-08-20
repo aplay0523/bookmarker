@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/layout}">
+<head>
+    <meta charset="UTF-8">
+    <title>도서 설명</title>
+</head>
+<body>
+<th:block layout:fragment="script">
+    <script th:inline="javascript">
+        const maniaRecBooksList = [[${data.maniaRecBooks}]];
+        console.log(maniaRecBooksList);
+
+        const container = document.getElementById('libraryResultContainer');
+        let targetLibSido = "";
+        let targetLibgungu = "";
+
+        // 랜더링 완료 후 실행
+        $(window).on('load', function() {
+            getManiaBook();
+        });
+
+        $(function() {
+
+            // 구/군 조회
+            $('#sidoSelect').on('change', function() {
+                targetLibSido = $(this).val();
+                $('#sigunguSelect option').remove();
+
+                if (targetLibSido != "") {
+                    $.ajax({
+                        url: '/library/sigungus',
+                        type: 'get',
+                        data: {libSido: targetLibSido},
+                        dataType: 'json',
+                        success: function(rows) {
+                            if (rows && rows.length > 0) {
+                                $.each(rows, function(index, sigungu) {
+                                    $('#sigunguSelect').append(
+                                        $('<option></option>').val(sigungu).text(sigungu)
+                                    );
+
+                                    if (index == 0) {
+                                        libSigungu = sigungu;
+                                        getSearchLibraryBook(targetLibSido, sigungu);
+                                    }
+                                });
+                                $('#sigunguSelect').prop('disabled', false);
+                            }
+                        }
+                    });
+                }
+            });
+
+            $('#sigunguSelect').on('change', function() {
+                container.innerHTML = '';
+                targetLibgungu = $(this).val();
+                getSearchLibraryBook(targetLibSido, targetLibgungu)
+            });
+        });
+
+        // 도서 보유 도서관 조회
+        function getSearchLibraryBook(libSido, sigungu) {
+            container.innerHTML = '<div class="loading-msg">조회 중입니다...</div>';
+
+            // 임시 가상 버퍼 생성
+            const fragment = new DocumentFragment();
+            // 보유 도서관 템플릿 가져오기
+            const template = document.getElementById('libraryTemplate');
+
+            let address = "";
+            let isbn = $('.span-isbn').data('isbn');
+            if (libSido) {
+                address = libSido + (sigungu ? " " + sigungu : "");
+            }
+
+            $.ajax({
+                url: '/books/api/libraries',
+                type: 'get',
+                data: {address: address, isbn: isbn},
+                dataType: 'json',
+                success: function(rows) {
+                    if (rows && rows.length > 0) {
+                        console.log(rows);
+
+                        $.each(rows, function(index, item) {
+                            const clone = template.content.cloneNode(true);
+
+                            clone.querySelector('.template-libName').textContent = item.libName;
+                            clone.querySelector('.template-address span').textContent = item.libAddress;
+
+                            fragment.appendChild(clone);
+                        });
+                        container.innerHTML= '';
+                        container.appendChild(fragment);
+                    } else {
+                        container.innerHTML = '<div class="empty-msg">보유한 도서관이 없습니다.</div>';
+                    }
+                },
+                error: function(e) {
+                    console.log('도서 보유 도서관 조회 오류:', e);
+                    container.innerHTML = '<div class="error-msg">조회 중 오류가 발생했습니다.</div>';
+                }
+            });
+        }
+
+        // 연관 마니아 책 조회(이미지)
+        function getManiaBook() {
+            if (!maniaRecBooksList || maniaRecBooksList.length == 0) {
+                return;
+            }
+
+            const isbnList = maniaRecBooksList.map(item => item.book.isbn13).filter(isbn => isbn);
+
+            $.ajax({
+                    url :  '/books/api/maniaBook',
+                    type : 'post',
+                    data : JSON.stringify({ isbns: isbnList}),
+                    dataType : 'json',
+                    contentType:'application/json;',
+                    success : function(rows) {
+                        console.log(rows);
+                        if (rows && rows.length > 0) {
+                            $.each(rows, function(index, item) {
+                                const $bookImg = $(".mania-book[data-isbn='" + item.isbn13 + "']");
+
+                                if ($bookImg.length > 0) {
+                                    const imgURL = item.bookImageURL;
+                                    if (imgURL != '' && imgURL != null) {
+                                        console.log(imgURL);
+                                        $bookImg.find('.book-img').attr('src',imgURL);
+                                    }
+                                }
+                            });
+                        }
+                    },
+                    error : function(e) {
+                        console.log('error', e);
+                    }
+            });
+        }
+    </script>
+
+</th:block>
+
+<div layout:fragment="content" class="container py-5">
+    <div class="card border-0 shadow-sm p-4 mb-5 bg-white" style="border-radius: 16px;">
+        <div class="row g-4 align-items-start">
+
+            <div class="col-md-3 text-center text-md-start">
+                <img th:src="${data.book.bookImageURL}" class="img-fluid shadow border" lt="도서 표지"
+                     style="width: 180px; height: 260px; object-fit: cover; border-radius: 8px;">
+            </div>
+
+            <div class="col-md-9">
+                <h3 class="fw-bold text-dark mb-4" style="letter-spacing: -0.5px;" th:text="${data.book.bookname}"></h3>
+
+                <div class="row g-3 style-table-info" style="font-size: 15px;">
+                    <div class="col-sm-6 d-flex align-items-center">
+                        <span class="badge bg-light text-secondary border px-3 py-2 me-3 text-center" style="min-width: 90px;">저자</span>
+                        <span class="text-dark fw-medium" th:text="${data.book.authors.replaceAll(';', '')}">-</span>
+                    </div>
+                    <div class="col-sm-6 d-flex align-items-center">
+                        <span class="badge bg-light text-secondary border px-3 py-2 me-3 text-center" style="min-width: 90px;">출판연월</span>
+                        <span class="text-dark" th:text="${data.book.publication_year}">-</span>
+                    </div>
+
+                    <div class="col-sm-6 d-flex align-items-center">
+                        <span class="badge bg-light text-secondary border px-3 py-2 me-3 text-center" style="min-width: 90px;">출판사</span>
+                        <span class="text-dark" th:text="${data.book.publisher}">-</span>
+                    </div>
+                    <div class="col-sm-6 d-flex align-items-center">
+                        <span class="badge bg-light text-secondary border px-3 py-2 me-3 text-center" style="min-width: 90px;">ISBN</span>
+                        <span class="text-dark font-monospace fw-semibold span-isbn" th:data-isbn="${data.book.isbn13}" th:text="${data.book.isbn13}">-</span>
+                    </div>
+
+                    <div class="col-sm-6 d-flex align-items-center">
+                        <span class="badge bg-light text-secondary border px-3 py-2 me-3 text-center" style="min-width: 90px;">Vol</span>
+                        <span class="text-dark" th:text="${data.book.vol}">-</span>
+                    </div>
+                    <div class="col-sm-6 d-flex align-items-center">
+                        <span class="badge bg-light text-secondary border px-3 py-2 me-3 text-center" style="min-width: 90px;">대출건수</span>
+                        <span class="text-dark" th:text="|${#numbers.formatInteger(data.book.loanCnt, 3, 'COMMA')}권|"></span>
+                    </div>
+
+                    <div class="col-12 d-flex align-items-center">
+                        <span class="badge bg-light text-secondary border px-3 py-2 me-3 text-center" style="min-width: 90px;">주제분야</span>
+                        <span class="text-muted" th:text="${data.book.class_nm}">-</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="px-2">
+        <div class="d-flex align-items-center mb-3">
+            <div class="bg-primary me-2" style="width: 4px; height: 18px; border-radius: 2px;"></div>
+            <h5 class="fw-bold text-dark m-0" style="font-size: 18px;">책소개</h5>
+        </div>
+
+        <div class="card border-0 bg-transparent p-1">
+            <p class="text-secondary lh-lg mb-0" th:text="${data.book.description}" style="font-size: 15px; text-align: justify;"></p>
+        </div>
+    </div>
+
+    <div class="container my-5" id="maniaBook">
+        <div class="bg-white rounded-4 p-4 shadow-sm border border-light-subtle">
+            <div class="d-flex align-items-center mb-4">
+                <h5 class="fw-bold mb-0 me-2">추천도서</h5>
+            </div>
+
+            <div class="row flex-nowrap overflow-x-auto g-3 pb-2 scrollbar-custom">
+                <div class="col mania-book" th:each="rows, state: ${data.maniaRecBooks}" th:data-isbn="${rows.book.isbn13}" style="flex: 0 0 auto; width: 165px;">
+                    <a th:href="@{/books/detail/{isbn}(isbn=${rows.book.isbn13})}" class="text-decoration-none text-dark d-block h-100 book-link">
+                        <div class="card h-100 border-0 bg-transparent">
+                            <div class="position-relative overflow-hidden rounded-3 border bg-light shadow-sm" >
+                                <img src="" class="w-100 h-100 object-fit-cover p-1 book-img" th:alt="${rows.book.bookname}">
+                            </div>
+                            <div class="card-body px-1 py-2">
+                                <p class="card-text text-dark small text-truncate mb-0 fw-bold" th:text="${rows.book.bookname}">도서명</p>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container my-5">
+
+        <div class="d-flex align-items-center mb-3">
+            <div class="bg-primary me-2" style="width: 4px; height: 18px; border-radius: 2px;"></div>
+            <h5 class="fw-bold text-dark m-0" style="font-size: 18px;">도서 소장 도서관</h5>
+        </div>
+
+        <div class="border rounded-4 p-4 bg-white shadow-sm mb-4">
+            <div class="row g-3">
+                <div class="col-6 col-md-3">
+                    <select class="form-select form-select-sm" id="sidoSelect" aria-label="시/도 선택">
+                        <option value="" selected>시/도 선택</option>
+                        <option th:each="list : ${sidoList}" th:value="${list.libSido}" th:text="${list.libSido}"></option>
+                    </select>
+                </div>
+                <div class="col-6 col-md-3">
+                    <select class="form-select form-select-sm" id="sigunguSelect" aria-label="구/군 선택" disabled>
+                        <option value="" selected>구/군 선택</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <hr class="text-secondary-subtle my-2">
+
+        <div id="libraryResultContainer">
+
+
+
+        </div>
+    </div>
+
+    <div class="text-center mt-5">
+        <button type="button" class="btn btn-outline-secondary fw-semibold px-4 py-2" onclick="location.href='/books';" style="border-radius: 8px;">
+            ◀ 목록으로 돌아가기
+        </button>
+    </div>
+
+    <template id="libraryTemplate">
+        <div class="py-3 d-flex justify-content-between align-items-center border-bottom border-light-subtle">
+            <div>
+                <h6 class="fw-bold text-dark mb-2 fs-5 template-libName">전북특별자치도교육청 고창도서관</h6>
+                <div class="text-muted small d-flex align-items-start template-address" style="font-size: 14px;">
+                    <i class="bi bi-geo-alt-fill text-danger me-1 mt-0.5"></i>
+                    <span>전북특별자치도 고창군 고창읍 천변북로 109</span>
+                </div>
+            </div>
+        </div>
+    </template>
+</div>
+</body>
+</html>

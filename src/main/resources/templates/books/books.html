@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/layout}">
+<head>
+    <meta charset="UTF-8">
+    <title>도서 검색</title>
+</head>
+<body>
+<th:block layout:fragment="script">
+    <script>
+        let pageNo = 1; // 페이지 번호
+        let isAjaxLoading = false; // 중보 요청 방지
+        let currentBookRows = [];
+        let currentKeyword = "";
+        let totalResultCnt = "";
+
+        // 관찰자 옵션
+        const option = {
+            root: null,         // 관찰대상(null-브라우저 전체기준)
+            rootMargin: '300px',// css margin 처럼 여백의미
+            threshold: 0.0      // 관찰대상 노출 % (0.0-1픽셀, 0.1==10%)
+        }
+
+        // 스크롤 관찰자 Observer
+        const bookScrollObserver = new IntersectionObserver(function(entries) {
+            // 감시 대상 메모리 객체가 화면에 노출 되었는지 체크
+            if (entries[0].isIntersecting) {
+                // 중복 실행 방지
+                if (isAjaxLoading) {
+                    return;
+                }
+                // 관찰 대상 해제
+                bookScrollObserver.unobserve(entries[0].target);
+                isAjaxLoading = true;
+                pageNo++;
+
+                getBooksList(currentKeyword, pageNo, true);
+            }
+        }, option);
+
+        $(function() {
+            // 세션 과거 기록 확인
+            const savedStateStr = sessionStorage.getItem('BOOK_SEARCH_STATE');
+
+            if (savedStateStr) {
+                const state = JSON.parse(savedStateStr);
+                currentKeyword = state.keyword;
+                pageNo = state.pageNo;
+                currentBookRows = state.rows;
+                totalResultCnt = state.totalCount;
+
+                // 화면 복원 다시 그리기
+                $('#searchKeyword').val(state.keyword);
+                $('#searchBtn').data('value',state.keyword);
+                $('#totalResultCnt').text(totalResultCnt);
+                drawBookList(state.rows, false);
+                // 이동전 기록된 위치로 이동
+                window.scrollTo(0, state.scrollPos);
+
+                // 세션 클리어
+                sessionStorage.removeItem('BOOK_SEARCH_STATE');
+            }
+
+            $('.search-box').on('input', '#searchKeyword', function() {
+                const keyword = $(this).val();
+                $(this).closest('.search-box').find('#searchBtn').data('value', keyword);
+            });
+
+            $('.search-box').on('click', '#searchBtn', function() {
+                currentKeyword = $(this).data('value');
+                pageNo = 1;
+                getBooksList(currentKeyword, pageNo, false);
+            });
+
+            $('#bookListContainer').on('click', '.js-btn-detail', function() {
+                const isbn = $(this).data('isbn');
+
+                // 세션 객체 생성
+                const searchState = { keyword: currentKeyword, pageNo: pageNo, rows: currentBookRows, scrollPos: window.scrollY, totalCount: $('#totalResultCnt').text() };
+                // 세션 문자열로 변환 저장
+                sessionStorage.setItem('BOOK_SEARCH_STATE', JSON.stringify(searchState));
+                location.href = '/books/detail/' + isbn;
+            });
+
+            $('#searchKeyword').on('keydown', function(e) {
+                if (e.key == 'Enter' || e.keyCode == 13) {
+                    $('#searchBtn').trigger('click');
+                }
+            });
+        });
+
+        // 책 리스트 조회
+        function getBooksList(keyWord, setPageNo, isScroll) {
+            console.log("키워드 : " + keyWord + "-" + "시작 페이지 : " + setPageNo);
+            $.ajax({
+                url : '/books/api/search' ,
+                type : 'get',
+                data : {keyword: keyWord, pageNo: setPageNo},
+                dataType : 'json',
+                success : function(rows) {
+                    console.log(rows.response);
+
+                    if (!rows.response.docs || rows.response.docs.length != 0) {
+                        $('#totalResultCnt').text(rows.response.numFound);
+
+                        // 스크롤 데이터 배열 등록
+                        if (!isScroll) {
+                            console.log("처음");
+                            currentBookRows = rows.response.docs;
+                            console.log(currentBookRows);
+                            drawBookList(rows.response.docs, false);
+                        } else {
+                            console.log("누적");
+                            isAjaxLoading = false;
+                            currentBookRows = currentBookRows.concat(rows.response.docs);
+                            console.log(currentBookRows);
+                            drawBookList(rows.response.docs, true);
+                        }
+                    }
+                },
+                error : function(e) {
+                    console.log('error',e);
+                    isAjaxLoading = false;
+                }
+            });
+        }
+
+        function drawBookList(docs, isScroll) {
+            const container = document.getElementById('bookListContainer');
+            // 첫 조회 시 초기화
+            if (!isScroll) {
+                container.innerHTML = '';
+                console.log("초기화");
+            }
+
+            // 임시 가상 버퍼 생성
+            const fragment = new DocumentFragment();
+            // 책 정보 템플릿 가져오기
+            const template = document.getElementById('bookListTemplate');
+
+            $.each(docs, function(index, item) {
+               const doc = item.doc;
+               // 템플릿 자식(cloneNode(true) 자식 모두) 복사
+               const clone = template.content.cloneNode(true);
+
+               // 직접 DOM에 데이터 바인딩
+               if (doc.bookImageURL != "") {
+                   clone.querySelector('.book-img').src = doc.bookImageURL;
+                   clone.querySelector('.book-img').alt = doc.bookname;
+               }
+               clone.querySelector('.book-isbn').textContent = doc.isbn13;
+               clone.querySelector('.book-name').textContent = doc.bookname;
+               clone.querySelector('.book-authors').textContent = doc.authors;
+               clone.querySelector('.book-publisher').textContent = doc.publisher;
+               clone.querySelector('.book-publicationYear').textContent = doc.publication_year;
+
+               clone.querySelector('.js-btn-detail').setAttribute('data-isbn', doc.isbn13);
+
+               fragment.appendChild(clone);
+            });
+            container.appendChild(fragment);
+
+            const lastBookLine = container.querySelector('.book-item:last-child');
+            console.log(lastBookLine);
+            if (lastBookLine) {
+                bookScrollObserver.observe(lastBookLine);
+                console.log("감시 대상");
+                console.log("bookScrollObserver");
+            }
+        };
+    </script>
+</th:block>
+<div layout:fragment="content" class="container py-4" style="max-width: 900px; font-family: 'Pretendard', sans-serif;">
+
+    <div class="card border-0 shadow-sm p-4 mb-4 bg-light search-box" style="border-radius: 12px;">
+        <div class="row g-2">
+            <div class="col-md-3">
+                <select class="form-select border-secondary-subtle" id="searchType">
+                    <option value="title">도서명</option>
+                </select>
+            </div>
+            <div class="col-md-7">
+                <input type="text" class="form-control border-secondary-subtle" id="searchKeyword" value="" placeholder="검색어를 입력하세요...">
+            </div>
+            <div class="col-md-2">
+                <button type="button" class="btn btn-primary w-100 fw-semibold" id="searchBtn" data-value="">
+                    🔍 검색
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex align-items-center justify-content-end mb-3 px-2 js-search-result-cnt">
+        <div class="text-muted" style="font-size: 14px;">
+            검색 결과 <strong class="text-primary fs-5 font-monospace ms-1" id="totalResultCnt">0</strong>건
+        </div>
+    </div>
+
+    <div id="bookListContainer"></div>
+
+    <div id="infiniteScrollTrigger" class="py-4 my-2">
+        <div id="bookLoader" class="d-none text-center">
+            <div class="spinner-border text-success" role="status" style="width: 2.5rem; height: 2.5rem;">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="text-muted small mt-2 fw-medium">도서 목록을 불러오는 중입니다...</p>
+        </div>
+
+        <div id="scrollSentinel" style="height: 20px; margin-top: -10px;"></div>
+    </div>
+
+    <template id="bookListTemplate">
+        <div class="card border-0 border-bottom rounded-0 py-4 px-2 bg-transparent book-item">
+            <div class="row align-items-center g-3">
+                <div class="col-auto">
+                    <img src="" class="img-fluid shadow-sm border book-img" alt="이미지 없음" style="width: 90px; height: 130px; object-fit: cover; border-radius: 4px;">
+                </div>
+                <div class="col">
+                    <div class="mb-1">
+                            <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary-subtle font-monospace px-2 py-1 book-isbn" style="font-size: 11px;"></span>
+                    </div>
+                    <h5 class="fw-bold text-dark mb-2 book-name" style="font-size: 18px; letter-spacing: -0.5px;">달걀의 온기</h5>
+                    <div class="text-muted d-flex flex-wrap gap-2 align-items-center" style="font-size: 13px;">
+                        <span>지은이 <strong class="text-dark fw-medium book-authors">김혜진 (지은이)</strong></span>
+                        <span class="text-secondary-subtle">|</span>
+                        <span>출판사 <span class="text-dark book-publisher">창비</span></span>
+                        <span class="text-secondary-subtle">|</span>
+                        <span>출판년도 <span class="text-dark book-publicationYear">2026</span></span>
+                    </div>
+                </div>
+                <div class="col-md-3 text-end">
+                    <div class="d-inline-flex flex-column align-items-end gap-2">
+                        <button type="button"
+                                class="btn btn-primary fw-semibold px-4 py-2 js-btn-detail"
+                                data-isbn=""
+                                style="background-color: #0056b3; border-color: #0056b3; border-radius: 8px; font-size: 14px; min-width: 110px; transition: all 0.2s;">
+                            상세보기 ➔
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+</div>
+</body>
+
+</html>

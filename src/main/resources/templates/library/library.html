@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/layout}">
+<head>
+    <meta charset="UTF-8">
+    <title>도서관 조회</title>
+
+    <style>
+        /* 네이버 지도 스타일의 Full-screen 뷰포트 고정 설정 */
+        .map-container-wrapper {
+            display: flex;
+            height: calc(100vh - 180px); /* 헤더와 네비게이션 바 높이를 제외한 영역 꽉 채우기 */
+            min-height: 500px;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        /* 좌측 사이드바 스타일 */
+        .sidebar-panel {
+            width: 380px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #dee2e6;
+            background-color: #f8f9fa;
+        }
+        /* 리스트 스크롤 영역 */
+        .list-scroll-area {
+            flex: 1;
+            overflow-y: auto;
+        }
+        /* 우측 지도 영역 */
+        .map-panel {
+            flex: 1;
+            height: 100%;
+            background-color: #e9ecef;
+            position: relative;
+        }
+        /* 지도 내부에 얹어질 가상 맵 텍스트 (실제 지도 연동시 삭제 가능) */
+        .map-placeholder {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #6c757d;
+            text-align: center;
+        }
+    </style>
+
+</head>
+<body>
+<th:block layout:fragment="script">
+    <script type="text/javascript" src="https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=uaq28q0dd7"></script>
+    <script>
+        let libSido = "";
+        let libSigungu = "";
+        let searchName = "";
+        // 도서관 정보 배열
+        let libraryInfoList = [];
+        // 마커 위치 배열
+        let markersArray = [];
+
+        // 맵 설정
+        let map = new naver.maps.Map('map', {
+            center: new naver.maps.LatLng(37.6472487, 126.7937750), // 초기 중심 좌표
+            zoom : 15,
+            minZoom : 8, // 줌 최소 레벨
+            zoomControl : true, // 줌 컨트롤 여부
+            zoomControlOptions : {
+                style: naver.maps.ZoomControlStyle.SMALL,
+                position: naver.maps.Position.TOP_RIGHT
+                }}); // 줌 컨트롤 옵션
+        // 마커 위치 지정
+        /*let marker = new naver.maps.Marker({
+            position: new naver.maps.LatLng(37.6472487, 126.7937750),
+            map : map
+            });*/
+
+        // 커스텀 마커 상세정보 예시
+        /*let contentString = [
+            '<div class="iw_inner">',
+            '   <h3>서울특별시청</h3>',
+            '   <p>서울특별시 중구 태평로1가 31 | 서울특별시 중구 세종대로 110 서울특별시청<br />',
+            '       02-120 | 공공,사회기관 &gt; 특별,광역시청<br />',
+            '       <a href="http://www.seoul.go.kr" target="_blank">www.seoul.go.kr/</a>',
+            '   </p>',
+            '</div>'
+        ].join('');*/
+
+        // 마커 레이아웃 세팅
+        let infowindow = new naver.maps.InfoWindow({
+            content: '',
+            maxWidth: 320,
+            backgroundColor: "#fff",
+            borderColor: "#2db400",
+            borderWidth: 3,
+            anchorSize: new naver.maps.Size(20, 20),
+            anchorSkew: true,
+            anchorColor: "#fff",
+            pixelOffset: new naver.maps.Point(0, -20)
+        });
+
+        // 마커 이벤트
+        /*naver.maps.Event.addListener(marker, "click", function(e) {
+            if (infowindow.getMap()) {
+                infowindow.close();
+            } else {
+                infowindow.open(map, marker);
+            }
+        });*/
+
+        // 마커 정보 열기 infowindow.open(map, marker);
+
+    $(function() {
+        // 구/군 조회
+        $('#sidoSelect').on('change', function() {
+            libSido = $(this).val();
+            $('#sigunguSelect option').remove();
+            if (libSido != "") {
+                $.ajax({
+                    url: '/library/sigungus',
+                    type: 'get',
+                    data: {libSido: libSido},
+                    dataType: 'json',
+                    success: function(rows) {
+                        $.each(rows, function(index, sigungu) {
+                            $('#sigunguSelect').append(
+                                $('<option></option>').val(sigungu).text(sigungu)
+                            );
+                        });
+                        $('#sigunguSelect').prop('disabled', false);
+
+                    }
+                });
+            }
+        });
+
+        // 도서관 검색버튼 이벤트
+        $('#searchBtn').on('click', function() {
+            searchName = $('#searchName').val();
+            libSido = $('#sidoSelect').val();
+            libSigungu = $('#sigunguSelect').val();
+
+            console.log("검색어:", searchName);
+            console.log("지역 검색 범위:", libSido, libSigungu);
+            if (libSido == "" || libSigungu == "") {
+                alert("검색할 지역을 선택해주세요.");
+            } else {
+                getLibraryInfoList();
+            }
+        });
+
+        // 도서관 리스트 클릭 이벤트
+        $('#libraryInfo').on('click', '.lib-item', function() {
+            const clickCode = $(this).data('code');
+            const clickIndex = $(this).data('index');
+
+            const libData = libraryInfoList.find(item => item.libCode == clickCode);
+            const targetMarker = markersArray[clickIndex];
+
+            if (libData && targetMarker) {
+                const moveLatLng = new naver.maps.LatLng(parseFloat(libData.latitude), parseFloat(libData.longitude));
+                map.panTo(moveLatLng);
+                showInfoWindow(JSON.parse(libData.libData), targetMarker);
+            }
+
+        });
+
+        $('#searchName').on('keydown', function(e) {
+            if (e.key == 'Enter' || e.keyCode == 13) {
+                $('#searchBtn').trigger('click');
+            }
+        });
+    });
+
+    // 도서관 검색
+    function getLibraryInfoList() {
+        let data = "";
+        if (libSido) {
+            data = libSido + (libSigungu ? " " + libSigungu : "");
+        }
+
+        // 목록 초기화
+        const $libraryInfo = $('#libraryInfo');
+        $libraryInfo.empty();
+        // 지도 표시된 마커 삭제
+        clearMarkers();
+        $.ajax({
+            url: '/library/libraries',
+            type: 'get',
+            data: {libName: searchName, address: data},
+            dataType: 'json',
+            success: function(rows) {
+                libraryInfoList = rows;
+                if (!rows || rows.length == 0) {
+                    $libraryInfo.append('<p class="text-center p-4 text-muted small">조회된 도서관이 없습니다.</p>');
+                    return;
+                }
+                $.each(rows, function(index, item) {
+                    console.log(item);
+                    console.log(JSON.parse(item.libData));
+                    const template =
+                        `<a href="javascript:void(0);" data-code="${item.libCode}" data-index="${index}" class="lib-item list-group-item list-group-item-action p-3 bg-white border-bottom">
+                            <div class="d-flex w-100 justify-content-between mb-1">
+                                <h6 class="fw-bold mb-0 text-dark">${item.libName}</h6>
+                            </div>
+                            <p class="mb-1 small text-muted">${item.libAddress}</p>
+                            <small class="text-muted">📞 ${item.libTel}</small>
+                        </a>`;
+
+                    $libraryInfo.append(template);
+
+                    // 각 도서관 위치에 마커 생성
+                    const markerPostion = new naver.maps.LatLng(item.latitude, item.longitude);
+                    const newMarker = new naver.maps.Marker({
+                        position: markerPostion,
+                        map: map,
+                        title: item.libName
+                    });
+                    // 생성된 마커 이벤트 바인딩(정보창 온/오프)
+                    naver.maps.Event.addListener(newMarker, "click", function() {
+                         if (infowindow.getMap()) {
+                            infowindow.close();
+                        } else {
+                            showInfoWindow(JSON.parse(item.libData), newMarker);
+                        }
+                    });
+                    markersArray.push(newMarker);
+                    // 첫번쨰로 조회된 도서관 위치로 이동
+                    if (index == 0) {
+                        map.setCenter(markerPostion);
+                        showInfoWindow(JSON.parse(item.libData), newMarker);
+                    }
+                });
+            },
+            error: function(e) {
+                console.log("도서관 조회 실패", e);
+                $libraryInfo.append('<p class="text-center p-4 text-muted small">도서관 조회를 실패 했습니다.</p>');
+            }
+        });
+    }
+
+    // 기존 마커 삭제
+    function clearMarkers() {
+        for (var i = 0; i < markersArray.length; i++) {
+            markersArray[i].setMap(null);
+        }
+        markersArray = []; // 초기화
+        infowindow.close();
+    }
+
+    // 마커 정보창 동적 생성
+    function showInfoWindow(libData, targetMarker) {
+        const $template = $('#libMarkerTemplate').clone().removeClass('d-none');
+
+        // JSON 데이터 바인딩
+        $template.find('.template-name').text(libData.libName);
+        $template.find('.template-addr').text(libData.address);
+        $template.find('.template-tel').text(libData.tel);
+        $template.find('.template-time').text(libData.operatingTime);
+        $template.find('.template-closed').text(libData.closed);
+        $template.find('.template-books').text(Number(libData.BookCount).toLocaleString());
+
+        if (libData.homepage && libData.homepage !== '-') {
+            $template.find('.template-link').attr('href', libData.homepage).show();
+        } else {
+            $template.find('.template-link').hide();
+        }
+
+        infowindow.setContent($template.html());
+        infowindow.open(map, targetMarker);
+    }
+    </script>
+</th:block>
+
+<div layout:fragment="content">
+    <div class="container-fluid px-0">
+
+        <div class="map-container-wrapper">
+
+            <div class="sidebar-panel">
+
+                <div class="p-3 bg-white border-bottom shadow-sm">
+                    <h5 class="fw-bold mb-3">도서관 검색</h5>
+
+                    <div class="row g-3 mb-2">
+                        <div class="col-6">
+                            <select class="form-select form-select-sm" id="sidoSelect" aria-label="시/도 선택">
+                                <option value="" selected>시/도 선택</option>
+                                <option th:each="list : ${sidoList}" th:value="${list.libSido}" th:text="${list.libSido}"></option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <select class="form-select form-select-sm" id="sigunguSelect" aria-label="구/군 선택" disabled>
+                                <option value="" selected>구/군 선택</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="input-group">
+                        <input type="text" class="form-control form-control-sm" id="searchName" placeholder="도서관 이름 검색">
+                        <button class="btn btn-sm btn-primary" id="searchBtn" type="button">검색</button>
+                    </div>
+                </div>
+
+                <div class="list-scroll-area">
+                    <div class="list-group list-group-flush" id="libraryInfo">
+
+                        <p class="text-center p-4 text-muted small">도서관 검색을 진행해주세요.</p>
+
+                    </div>
+                </div>
+            </div>
+
+            <div id="map" class="map-panel">
+                <div class="map-placeholder">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor" class="text-secondary mb-2" viewBox="0 0 16 16">
+                        <path d="M8 16s6-5.686 6-10A6 6 0 0 0 2 6c0 4.314 6 10 6 10zm0-7a3 3 0 1 1 0-6 3 3 0 0 1 0 6z"/>
+                    </svg>
+                    <h5 class="text-secondary fw-bold">네이버 지도 영역</h5>
+                    <p class="small text-muted mb-0">Naver Map API 스크립트를 연동해 주세요.</p>
+                </div>
+            </div>
+
+        </div>
+    </div>
+    <div id="libMarkerTemplate" class="d-none">
+        <div class="p-3" style="width: 290px; font-family: 'Pretendard', -apple-system, sans-serif; line-height: 1.6;">
+
+            <div class="d-flex align-items-center justify-content-between mb-1">
+            <span class="badge bg-success bg-opacity-10 text-success fw-semibold px-2 py-1" style="font-size: 11px; border-radius: 4px;">
+                작은도서관
+            </span>
+                <span class="text-muted fw-medium" style="font-size: 11px; letter-spacing: -0.3px;">
+                📚 장서 <strong class="text-dark template-books">0</strong>권
+            </span>
+            </div>
+
+            <h5 class="fw-bold text-dark my-1 template-name" style="font-size: 17px; letter-spacing: -0.5px; word-break: keep-all;">
+                도서관 이름
+            </h5>
+
+            <hr class="my-2" style="border-top: 1px dashed #e0e0e0; opacity: 1;">
+
+            <div class="library-info-body" style="font-size: 13px; color: #4a4a4a;">
+                <div class="d-flex align-items-start mb-1.5">
+                    <span class="text-muted flex-shrink-0 me-2" style="width: 54px; font-size: 12px;">📍 주소</span>
+                    <span class="text-dark template-addr text-wrap" style="letter-spacing: -0.3px;">경상남도 거제시...</span>
+                </div>
+                <div class="d-flex align-items-center mb-1.5">
+                    <span class="text-muted flex-shrink-0 me-2" style="width: 54px; font-size: 12px;">📞 연락처</span>
+                    <span class="text-dark template-tel">055-123-4567</span>
+                </div>
+                <div class="d-flex align-items-start mb-1.5">
+                    <span class="text-muted flex-shrink-0 me-2" style="width: 54px; font-size: 12px;">⏰ 운영</span>
+                    <span class="text-dark template-time text-wrap" style="letter-spacing: -0.3px;">화~토 09:00~18:00</span>
+                </div>
+                <div class="d-flex align-items-start mb-1">
+                    <span class="text-danger flex-shrink-0 me-2" style="width: 54px; font-size: 12px; fw-bold;">❌ 휴관</span>
+                    <span class="text-danger template-closed text-wrap fw-semibold" style="letter-spacing: -0.3px;">매주 월요일, 일요일</span>
+                </div>
+            </div>
+
+            <div class="mt-2.5 pt-2 border-top border-light">
+                <a href="#" target="_blank" rel="noopener noreferrer"
+                   class="btn btn-sm btn-outline-success w-100 py-1.5 fw-semibold template-link"
+                   style="font-size: 12px; border-radius: 6px; transition: all 0.2s;">
+                    🌐 도서관 홈페이지 방문
+                </a>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

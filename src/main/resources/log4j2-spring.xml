@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration>
+ <SpringProfile name="local">
+  <include resource="log4j2-local.xml"/>
+ </SpringProfile>
+
+ <SpringProfile name="prod">
+  <include resource="log4j2-prod.xml"/>
+ </SpringProfile>
+</Configuration>

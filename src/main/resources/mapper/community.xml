@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.library.bookmarker.mapper.CommunityMapper">
+
+    <select id="selectCommunityCount">
+        -- CommunityMapper.selectCommunityCount
+        SELECT
+            COUNT(*)
+        FROM board b
+        <where>
+            <if test="title != null and title != ''">
+                AND b.title LIKE CONCAT('%', #{title}, '%')
+            </if>
+            <if test="name != null and name != ''">
+                AND u.name = #{name}
+            </if>
+        </where>
+    </select>
+
+    <select id="selectCommunityList">
+        -- CommunityMapper.selectCommunityList
+        SELECT
+            b.id
+            ,b.user_id
+            ,b.title
+            ,b.content
+            ,b.isbn
+            ,b.view_count
+            ,b.create_dt
+            ,b.update_dt
+            ,u.email
+            ,u.name
+        FROM board b
+        INNER JOIN public.user u ON b.user_id = u.id
+        <where>
+            <if test="title != null and title != ''">
+                AND b.title LIKE CONCAT('%', #{title}, '%')
+            </if>
+            <if test="name != null and name != ''">
+                AND u.name = #{name}
+            </if>
+        </where>
+        ORDER BY b.id DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="selectCommunity" resultType="CommunityVo">
+        -- CommunityMapper.CommunityVo
+        SELECT
+            b.id
+            ,b.user_id
+            ,b.title
+            ,b.content
+            ,b.isbn
+            ,b.view_count
+            ,b.create_dt
+            ,b.update_dt
+            ,u.email
+            ,u.name
+        FROM board b
+        INNER JOIN public.user u ON b.user_id = u.id
+        WHERE b.id = #{id}
+    </select>
+
+    <insert id="insertCommunity">
+        -- CommunityMapper.insertCommunity
+        INSERT INTO board(
+            user_id
+            ,title
+            ,content
+            ,isbn
+            ,view_count
+            ,create_dt
+            ,update_dt
+        ) VALUES (
+            #{userId}
+            ,#{title}
+            ,#{content}
+            ,COALESCE(#{isbn}, 0)
+            ,0
+            ,NOW()
+            ,NOW()
+        )
+    </insert>
+
+    <delete id="deleteCommunity">
+        -- CommunityMapper.deleteCommunity
+        DELETE FROM board
+        WHERE id = #{id} AND user_id = #{userId}
+    </delete>
+</mapper>

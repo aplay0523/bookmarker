@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration>
+
+    <Properties>
+        <property name="LOGS_PATH">./logs</property>
+    </Properties>
+
+    <Appenders>
+        <!-- 콘솔 -->
+        <Console name="console" target="SYSTEM_OUT">
+            <!-- 운영용 패턴: 상대시간(relative)을 제외하고 깔끔하게 출력 -->
+            <PatternLayout pattern="[%d{yyyy-MM-dd HH:mm:ss}] %-5level %logger{35} - %msg%n" />
+        </Console>
+    </Appenders>
+
+    <Loggers>
+        <!-- Spring Framework -->
+        <Logger name="org.springframework" level="ERROR" additivity="false">
+            <AppenderRef ref="console"/>
+        </Logger>
+
+        <Logger name="org.springframework.security" level="ERROR" additivity="false">
+            <AppenderRef ref="console"/>
+        </Logger>
+
+        <!-- HikariCP -->
+        <Logger name="com.zaxxer.hikari" level="ERROR" additivity="false">
+            <AppenderRef ref="console"/>
+        </Logger>
+
+        <!-- Hibernate (SQL 쿼리 및 파라미터 로깅 차단) -->
+        <Logger name="org.hibernate.SQL" level="ERROR" additivity="false">
+            <AppenderRef ref="console"/>
+        </Logger>
+
+        <Logger name="org.hibernate.type.descriptor.sql.BasicBinder" level="ERROR" additivity="false">
+            <AppenderRef ref="console"/>
+        </Logger>
+
+        <!-- MyBatis -->
+        <Logger name="org.mybatis.spring" level="ERROR" additivity="false">
+            <AppenderRef ref="console"/>
+        </Logger>
+
+        <!-- Log4Jdbc (쿼리 및 결과 테이블 출력 OFF) -->
+        <Logger name="jdbc.sqlonly" level="OFF" additivity="false" />
+        <Logger name="jdbc.resultsettable" level="OFF" additivity="false" />
+        <Logger name="jdbc.sqltiming" level="OFF" additivity="false" />
+        <Logger name="jdbc.audit" level="OFF" additivity="false" />
+        <Logger name="jdbc.resultset" level="OFF" additivity="false" />
+        <Logger name="jdbc.connection" level="OFF" additivity="false" />
+
+        <!-- HttpClient -->
+        <Logger name="jdk.internal.httpclient.debug" level="ERROR" />
+        <Logger name="java.net.http" level="ERROR" />
+
+        <!-- 루트 로거: ERROR 이상(ERROR, FATAL)만 출력 -->
+        <Root level="ERROR">
+            <AppenderRef ref="console" />
+        </Root>
+    </Loggers>
+</Configuration>
