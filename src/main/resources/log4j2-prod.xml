@@ -3,43 +3,68 @@
 
     <Properties>
         <property name="LOGS_PATH">./logs</property>
+        <property name="LOG_PATTERN">[%d{yyyy-MM-dd HH:mm:ss}] %-5level %logger{35} - %msg%n</property>
     </Properties>
 
     <Appenders>
         <!-- 콘솔 -->
         <Console name="console" target="SYSTEM_OUT">
             <!-- 운영용 패턴: 상대시간(relative)을 제외하고 깔끔하게 출력 -->
-            <PatternLayout pattern="[%d{yyyy-MM-dd HH:mm:ss}] %-5level %logger{35} - %msg%n" />
+            <PatternLayout pattern="${LOG_PATTERN}" />
         </Console>
+        <RollingFile name="file"
+                     fileName="${LOGS_PATH}/application.log"
+                     filePattern="${LOGS_PATH}/application-%d{yyyy-MM-dd}-%i.log.gz">
+            <PatternLayout pattern="${LOG_PATTERN}" />
+            <Policies>
+                <!-- 자정에 날짜별로 파일 분할 -->
+                <TimeBasedTriggeringPolicy interval="1" modulate="true" />
+                <!-- 단일 로그 파일이 10MB를 넘으면 분할 -->
+                <SizeBasedTriggeringPolicy size="10MB" />
+            </Policies>
+            <DefaultRolloverStrategy max="30">
+                <!-- 30일이 지난 오래된 로그 파일(.gz) 자동 삭제 -->
+                <Delete basePath="${LOGS_PATH}" maxDepth="1">
+                    <IfFileName glob="application-*.log.gz" />
+                    <IfLastModified age="30d" />
+                </Delete>
+            </DefaultRolloverStrategy>
+        </RollingFile>
     </Appenders>
 
     <Loggers>
         <!-- Spring Framework -->
         <Logger name="org.springframework" level="ERROR" additivity="false">
             <AppenderRef ref="console"/>
+            <AppenderRef ref="file"/>
         </Logger>
 
         <Logger name="org.springframework.security" level="ERROR" additivity="false">
             <AppenderRef ref="console"/>
+            <AppenderRef ref="file"/>
         </Logger>
 
         <!-- HikariCP -->
         <Logger name="com.zaxxer.hikari" level="ERROR" additivity="false">
             <AppenderRef ref="console"/>
+            <AppenderRef ref="file"/>
         </Logger>
 
         <!-- Hibernate (SQL 쿼리 및 파라미터 로깅 차단) -->
         <Logger name="org.hibernate.SQL" level="ERROR" additivity="false">
             <AppenderRef ref="console"/>
+            <AppenderRef ref="file"/>
         </Logger>
 
         <Logger name="org.hibernate.type.descriptor.sql.BasicBinder" level="ERROR" additivity="false">
             <AppenderRef ref="console"/>
+            <AppenderRef ref="file"/>
         </Logger>
 
         <!-- MyBatis -->
         <Logger name="org.mybatis.spring" level="ERROR" additivity="false">
             <AppenderRef ref="console"/>
+            <AppenderRef ref="file"/>
         </Logger>
 
         <!-- Log4Jdbc (쿼리 및 결과 테이블 출력 OFF) -->
@@ -57,6 +82,7 @@
         <!-- 루트 로거: ERROR 이상(ERROR, FATAL)만 출력 -->
         <Root level="ERROR">
             <AppenderRef ref="console" />
+            <AppenderRef ref="file"/>
         </Root>
     </Loggers>
 </Configuration>
