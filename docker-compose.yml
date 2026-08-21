@@ -15,7 +15,7 @@ services:
     restart: always
 
   app:
-    build: .
+    build: src/main/resources
     image: bookmarker-app:latest
     container_name: bookmarker-app
     ports:
