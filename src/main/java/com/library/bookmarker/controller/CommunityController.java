@@ -45,7 +45,7 @@ public class CommunityController {
 
         model.addAttribute("isLogin", isLogin);
         model.addAttribute("pageInfo", pageInfo);
-        return "/community/list";
+        return "community/list";
     }
 
     // 커뮤니티 게시물 상세 조회
@@ -84,7 +84,7 @@ public class CommunityController {
         PageResponseVo<CommunityVo> pageInfo = new PageResponseVo<>(communityVoList, totalCount, page, size);
 
         model.addAttribute("pageInfo", pageInfo);
-        return "/community/list :: boardTableArea";
+        return "community/list :: boardTableArea";
     }
 
     // 커뮤니티 게시물 등록

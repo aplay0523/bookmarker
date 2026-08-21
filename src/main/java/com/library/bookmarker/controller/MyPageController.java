@@ -36,7 +36,7 @@ public class MyPageController {
         }
 
         model.addAttribute("data", userVo);
-        return "/myPage/main";
+        return "myPage/main";
     }
 
     // 사용자 계정 삭제

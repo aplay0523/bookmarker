@@ -1,20 +1,36 @@
-version: '3.8'
+# 도커 컴포즈 버전
+version: '2.27.0'
 
 services:
+  # 레디스 설정
   redis:
     image: redis:latest
     container_name: redis
-    command: redis-server --maxmemory 1gb --maxmemory-policy allkeys-lru
+    # 최대 메모리 제한, 초과 시 오래된 순부터 삭제
+    command: redis-server --maxmemory 128gb --maxmemory-policy allkeys-lru
     ports:
       - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: always
 
   app:
     build: .
-    container_name: bookMarker:latest
+    image: bookmarker-app:latest
+    container_name: bookmarker-app
     ports:
-      - "8088:8088"
+      - "80:80"
+    env_file:
+      - .env
     environment:
-      - REDIS_HOST=redis
+      - SPRING_PROFILES_ACTIVE=prod
+      - SPRING_REDIS_HOST=redis
+      - SPRING_REDIS_PORT=6379
+      - TZ=Asia/Seoul
+      - LOGGING_LEVEL_ROOT=DEBUG  # 디버깅
+    volumes:
+      - ./logs:/app/logs
     depends_on:
       - redis
-
+volumes:
+  redis_data:
