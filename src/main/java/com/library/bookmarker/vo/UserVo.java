@@ -1,5 +1,6 @@
 package com.library.bookmarker.vo;
 
+import java.io.Serializable;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
@@ -12,7 +13,9 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class UserVo {
+public class UserVo implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private Long id;
     private String email;

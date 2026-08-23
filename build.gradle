@@ -55,6 +55,10 @@ dependencies {
 
 	// 레디스 추가
 	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+	// Spring Session Redis 추가
+	implementation 'org.springframework.session:spring-session-data-redis'
+	// health check를 위한 상태확인 의존성 추가
+	implementation 'org.springframework.boot:spring-boot-starter-actuator'
 }
 
 tasks.named('test') {
