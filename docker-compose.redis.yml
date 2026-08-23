@@ -1,0 +1,18 @@
+services:
+  # 레디스 설정
+  redis:
+    image: redis:latest
+    container_name: redis
+    # 최대 메모리 제한, 초과 시 오래된 순부터 삭제
+    command: redis-server --maxmemory 128gb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: always
+
+# 접속할 was 서버 네트워크 생성
+networks:
+  bookmarker-net:
+    driver: bridge
+    name: bookmarker-net
