@@ -8,7 +8,7 @@ RUN apk add --no-cache tzdata && \
     cp /usr/share/zoneinfo/$TZ /etc/localtime && \
     echo $TZ > /etc/timezone
 
-COPY bookmarker-0.0.1.jar app.jar
+COPY bookmarker-*.jar app.jar
 
 EXPOSE 80
 
