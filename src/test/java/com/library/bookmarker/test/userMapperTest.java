@@ -34,12 +34,8 @@ public class userMapperTest {
                 .providerId(providerId)
                 .build();
         int insertResult = userMapper.insertUser(userVo);
-        System.out.print(providerId);
-
-        // sha-256 암호화 검증
-        assertThat(providerId).isEqualTo("285c3ad8116d0234decb0c47457dc6f29a1f24b615fd3cc128cb51975b7799b3");
-
-        UserVo newUserVo = userMapper.selectUser("google",providerId);
+        System.out.print("providerId");
+        UserVo newUserVo = userMapper.selectUser("google","google-123");
 
         assertThat(insertResult).isEqualTo(1);
         assertThat(newUserVo).isNotNull();

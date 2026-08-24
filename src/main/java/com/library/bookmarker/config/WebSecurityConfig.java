@@ -10,9 +10,11 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.session.data.redis.config.annotation.web.http.EnableRedisHttpSession;
 
 @Configuration
 @EnableWebSecurity
+@EnableRedisHttpSession
 @RequiredArgsConstructor
 public class WebSecurityConfig {
 
@@ -39,7 +41,8 @@ public class WebSecurityConfig {
                                 "/login/**",
                                 "/bootstrap/**",
                                 "/favicon.ico",
-                                "/error"
+                                "/error",
+                                "/actuator/health"
                         ).permitAll()
                         .requestMatchers(
                                 "/board/**",

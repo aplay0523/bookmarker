@@ -1,9 +1,10 @@
+# 무중단 배포 전 깃 액션 워크플로우 파일 (사용안함)
 name: Deploy aws ec2 docker ci/cd
 
-on:
-  push:
-    branches:
-      - main
+#on:
+#  push:
+#    branches:
+#      - main
 
 jobs:
   deploy:
@@ -35,17 +36,6 @@ jobs:
           source: "build/libs/*.jar"
           target: "/home/ec2-user/docker"
           strip_components: 2
-      # deploy.sh ec2로 scp 전송
-      - name: Copy files to EC2
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          port: ${{ secrets.EC2_PORT }}
-          username: ${{ secrets.EC2_USERNAME }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          source: ".github/workflows/deploy.sh"
-          target: "/home/ec2-user/docker"
-          strip_components: 2
       # dockerfile, compose ec2로 scp 전송
       - name: Copy files to EC2
         uses: appleboy/scp-action@v0.1.7
@@ -54,7 +44,7 @@ jobs:
           port: ${{ secrets.EC2_PORT }}
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          source: "Dockerfile,docker-compose.blue.yml,docker-compose.green.yml,docker-compose.redis.yml"
+          source: "Dockerfile,docker-compose.yml"
           target: "/home/ec2-user/docker"
 
       # ssh 실행 스크립트 최신버전 백업 -> 빌드 -> 구이미지 삭제
@@ -67,7 +57,7 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             cd /home/ec2-user/docker
-            # nginx용 deploy 실행
-            ./deploy.sh
-            # 구 이미지 삭제
+            docker compose down || true
+            docker compose up -d --build
             docker image prune -f
+            cp *.jar /home/ec2-user/docker/back/
