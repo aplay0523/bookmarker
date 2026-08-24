@@ -41,7 +41,8 @@ public class WebSecurityConfig {
                                 "/login/**",
                                 "/bootstrap/**",
                                 "/favicon.ico",
-                                "/error"
+                                "/error",
+                                "/actuator/health"
                         ).permitAll()
                         .requestMatchers(
                                 "/board/**",
