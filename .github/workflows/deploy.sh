@@ -11,7 +11,7 @@ echo "> 현재 구동중인 bookmarker-app-blue 컨테이너 찾기"
 EXIST_BLUE=$(docker ps -q -f name=bookmarker-app-blue)
 echo "> 컨테이너 ID: $EXIST_BLUE"
 
-echo "> 컨테이너 ID 길이 체크 0=8082, 0!=8081"
+echo "> 컨테이너 ID 길이 체크 0=8081, 0!=8082"
 if [ -z "$EXIST_BLUE" ]; then
   echo "> [BLUE] 배포 시작 (포트: 8081)"
   TARGET_PORT=8081
