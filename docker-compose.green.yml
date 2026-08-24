@@ -14,8 +14,6 @@ services:
       - LOGGING_LEVEL_ROOT=DEBUG  # 디버깅
     volumes:
       - ./logs:/app/logs
-    depends_on:
-      - bookmarker-redis
     networks:
       - bookmarker-net
 
