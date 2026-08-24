@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<th:block th:fragment="loadingFragment">
+
+    <!-- Bootstrap 오버레이 & 스피너 -->
+    <div id="global-loading-overlay" class="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-50 flex-column justify-content-center align-items-center text-white" style="display: none; z-index: 1060;">
+        <div class="spinner-border text-light mb-3" role="status" style="width: 3rem; height: 3rem;">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="fs-6 fw-semibold m-0">처리 중입니다. 잠시만 기다려 주세요...</p>
+    </div>
+
+    <!-- 전역 AJAX 감지 스크립트 -->
+    <script>
+        $(document).ready(function() {
+            $(document).ajaxSend(function(event, jqxhr, settings) {
+                if (settings.showLoading !== false) {
+                    $('#global-loading-overlay').removeClass('d-none').addClass('d-flex');
+                }
+            });
+
+            $(document).ajaxComplete(function(event, jqxhr, settings) {
+                if (settings.showLoading !== false) {
+                    $('#global-loading-overlay').removeClass('d-flex').addClass('d-none');
+                }
+            });
+        });
+    </script>
+
+</th:block>
+</html>

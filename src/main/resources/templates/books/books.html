@@ -93,6 +93,13 @@
         // 책 리스트 조회
         function getBooksList(keyWord, setPageNo, isScroll) {
             console.log("키워드 : " + keyWord + "-" + "시작 페이지 : " + setPageNo);
+
+            // 로드 문구 삽입
+            const $loader = $('#bookLoader');
+            $loader.find('.spinner-border').removeClass('d-none');
+            $loader.find('p').removeClass('text-danger').addClass('text-muted').text('도서 목록 불러오는 중입니다...');
+            $loader.removeClass('d-none');
+
             $.ajax({
                 url : '/books/api/search' ,
                 type : 'get',
@@ -122,6 +129,9 @@
                 error : function(e) {
                     console.log('error',e);
                     isAjaxLoading = false;
+                    $loader.find('.spinner-border').addClass('d-none');
+                    $loader.find('p').removeClass('text-muted').addClass('text-danger').text('도서 목록 불러오는 중 오류가 발생했습니다...');
+                    $loader.removeClass('d-none');
                 }
             });
         }

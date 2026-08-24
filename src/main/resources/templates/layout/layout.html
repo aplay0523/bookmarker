@@ -10,6 +10,7 @@
 
 <div class="container">
   <th:block th:replace="~{layout/header :: header}"></th:block>
+  <!-- 공통 페이지 헤드 부분 -->
   <div class="nav-scroller py-1 mb-2">
     <nav class="nav d-flex justify-content-between">
       <a class="p-2 text-muted fw-bold" href="/library">도서관</a>
@@ -18,11 +19,15 @@
       <a sec:authorize="isAuthenticated()" class="p-2 text-muted fw-bold" href="/myPage">내 정보</a>
     </nav>
   </div>
+  <!-- 공통 로딩 오버레이 -->
+  <div th:replace="~{layout/loading :: loadingFragment}"></div>
+  <!-- 개별 페이지 컨텐츠 부분 -->
   <main class="py-4">
     <div layout:fragment="content"></div>
   </main>
 </div>
 
+<!-- 개별 페이지 스크립트 부분 -->
 <th:block layout:fragment="script"></th:block>
 
 </body>
