@@ -9,20 +9,20 @@ spring:
     profiles:
       active: local
 
-    data:
+  data:
+    redis:
+      host: ${SPRING_REDIS_HOST:localhost}
+      port: ${SPRING_REDIS_PORT:6379}
+      lettuce:
+        pool:
+          max-active: 8 # 동시 사용 최대 커넥션 수
+          max-idle: 8   # 대기 상태 유지 커넥션 수
+          min-idle: 0   # 최소 대기 커넥션 수
+    session:
+      store-type: redis
       redis:
-        host: ${SPRING_REDIS_HOST:localhost}
-        port: ${SPRING_REDIS_PORT:6379}
-        lettuce:
-          pool:
-            max-active: 8 # 동시 사용 최대 커넥션 수
-            max-idle: 8   # 대기 상태 유지 커넥션 수
-            min-idle: 0   # 최소 대기 커넥션 수
-      session:
-        store-type: redis
-        redis:
-          namespace: spring:session
-        timeout: 1800s
+        namespace: spring:session
+      timeout: 1800s
   security:
     oauth2:
       client:
