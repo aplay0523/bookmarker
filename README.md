@@ -1,3 +1,5 @@
+<img width="1339" height="769" alt="image" src="https://github.com/user-attachments/assets/c49f8253-8f94-4122-b029-54ac2038c5fe" />
+
 ## 프로젝트 소개
 - 도서관 정보나루 대용량 공공데이터 처리 최적화와 CI/CD 및 무중단 배포를 위한 백엔드 기술 중심 프로젝트입니다.
 
@@ -26,7 +28,7 @@
 ## 주요기능
 - 도서관 검색 네이버 지도 매핑
 - 도서 검색 및 상세 정보 조회
-- 소셜 로그인
+- 구글, 카카오, 네이버 소셜 로그인
 - Nginx를 활용한 무중단 배포
 - Git Actions활용한 CI/CD
 
